@@ -1,0 +1,96 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  release:
+    types: [published]
+
+env:
+  vcpkg_TAG: 81420a0d74133c00ed9b6eae50594ee4c5fe3ffb
+
+jobs:
+  build:
+    # We would like to build with v140 toolset to be compatible with both VS2017, 2019
+    # But that will only be avaiilable in late november: https://github.com/actions/virtual-environments/issues/68
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build_type: [Release]
+        os: [windows-2019, macOS-latest, ubuntu-latest]
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Check free space
+      shell: bash
+      run: |
+        df -h
+
+    # Workaround for https://github.community/t5/GitHub-Actions/Windows-tests-worked-yesterday-broken-today/td-p/43574
+    - name: Override bash shell PATH (windows-latest)
+      if: matrix.os == 'windows-2019'
+      run: echo "::add-path::C:\Program Files\Git\bin"
+
+    - name: Download custom vcpkg and additional ports [Windows]
+      if: matrix.os == 'windows-2019'
+      shell: bash
+      run: |
+        choco install -y wget
+        mkdir C:/qhull-deps
+        cd C:/qhull-deps
+        cd /c/qhull-deps
+        git clone https://github.com/GiulioRomualdi/vcpkg
+        cd vcpkg
+        git checkout ${vcpkg_TAG}
+        ./bootstrap-vcpkg.sh
+
+    - name: Download custom vcpkg and additional ports [macOS]
+      if: matrix.os == 'macOS-latest'
+      shell: bash
+      run: |
+        mkdir qhull-deps
+        cd qhull-deps
+        git clone https://github.com/GiulioRomualdi/vcpkg
+        cd vcpkg
+        git checkout ${vcpkg_TAG}
+        ./bootstrap-vcpkg.sh
+
+    - name: Download custom vcpkg and additional ports [linux]
+      if: matrix.os == 'ubuntu-latest'
+      shell: bash
+      run: |
+        mkdir qhull-deps
+        cd qhull-deps
+        git clone https://github.com/GiulioRomualdi/vcpkg
+        cd vcpkg
+        git checkout ${vcpkg_TAG}
+        ./bootstrap-vcpkg.sh
+
+
+    - name: Install vcpkg ports (static) [Windows]
+      if: matrix.os == 'windows-2019'
+      shell: bash
+      run: |
+        /c/qhull-deps/vcpkg/vcpkg.exe install --triplet x64-windows-static qhull
+
+    - name: Install vcpkg ports (dynamic) [Windows]
+      if: matrix.os == 'windows-2019'
+      shell: bash
+      run: |
+        /c/qhull-deps/vcpkg/vcpkg.exe install --triplet x64-windows qhull
+
+
+    - name: Install vcpkg ports [macOS]
+      if: matrix.os == 'macOS-latest'
+      shell: bash
+      run: |
+        ./qhull-deps/vcpkg/vcpkg install --triplet x64-osx qhull
+
+
+    - name: Install vcpkg ports [linux]
+      if: matrix.os == 'ubuntu-latest'
+      shell: bash
+      run: |
+        ./qhull-deps/vcpkg/vcpkg install --triplet x64-linux qhull
