@@ -7,7 +7,7 @@ on:
     types: [published]
 
 env:
-  vcpkg_TAG: 81420a0d74133c00ed9b6eae50594ee4c5fe3ffb
+  vcpkg_TAG: 2ea451934ff2f9409542a462ee40f308453e46d1
 
 jobs:
   build:
